@@ -1,9 +1,67 @@
+#include <stdlib.h>
+#include <stdio.h>
 typedef enum 
 {
 	false,
 	true
 	
 }bool;
+// Array of pointers to structures
+typedef struct
+{
+	int iNum_Elements;
+	void *pElements;
+}Array;
+void array_init(Array* pArray)
+{
+	pArray->iNum_Elements = 0;
+	pArray->pElements = NULL;
+}
+
+void array_empty(Array* pArray)
+{
+	if(pArray->iNum_Elements>0)
+		{
+			free(pArray->pElements);
+			pArray->pElements=NULL;
+			pArray->iNum_Elements=0;
+		}
+		
+		
+}
+/* Description of the material used for a game (How many of rows and colums in the board, description of the pieces)*/
+typedef struct
+{	//number of rows and columsof the board
+	int iNumRows;
+	int iNumCols;	
+	Array sPieceDefs; //Array of PieceDef
+	Array sHolePos; //Array of Position	
+}Material;
+Material * material_create(int iNumRows, int iNumCols)
+{
+	Material* pMaterial = (Material *)malloc(sizeof(Material));
+	pMaterial->iNumRows = iNumRows;
+	pMaterial->iNumCols = iNumCols;
+	array_init(&pMaterial->sPieceDefs);
+	array_init(&pMaterial->sHolePos);
+	return pMaterial;	
+}
+void material_delete(Material* pMaterial)
+{
+	// type of pMaterial : Material*
+	// type of *pMaterial : Material
+	// type (*pMaterial).sPieceDefs : Array
+	// type of pMaterial->PieceDefs : Array
+	// type of &(pMaterial->sPieceDefs): Array*
+	array_empty(&(pMaterial->sPieceDefs));
+	array_empty(&(pMaterial->sHolePos));
+	free(pMaterial);
+}
+void material_print(Material* pMaterial)
+{
+	printf("board size: %d x %d", pMaterial->iNumRows,pMaterial->iNumCols);
+	
+}
 
 typedef struct
 {
@@ -18,13 +76,16 @@ typedef enum
 	DIRECTION_RIGHT=3
 	
 }Direction;
-
+typedef struct
+{
+	bool bCellIsCovered;
+	bool bCellHasNut;
+}CellState;
+// state of every cell in the board
 typedef struct 
 {
-	int iWidth;
-	int iHeigth;
-	int iNumholes;	
-	struct Position * pHolesLocation;
+	Material* pMaterial; //reference to the material used
+	CellState* pCellState;
 }Board;
 typedef int PieceId;
 typedef struct 
@@ -48,18 +109,16 @@ typedef struct
 
 typedef enum 
 {
-	Rotation_0=0,
-	Rotation_90=1,
+	Rotation_0  =0,
+	Rotation_90 =1,
 	Rotation_180=2,
-	Rotation_270=3
-	
+	Rotation_270=3	
 }Rotation;
 
 typedef struct 
 {
 	Position sPos;
-	Rotation eRot;
-	
+	Rotation eRot;	
 }PiecePos;
 //stack of moves
 typedef struct
@@ -67,6 +126,15 @@ typedef struct
 	Move *pMoves;
 	int iNumMoves;	
 }Game;
+
+/* a challenge made of initial position of pieces*/
+typedef struct
+{
+	Material* pMaterial;
+	Array sPieceStartConfig; // array of PiecePos
+}Puzzle;
+
+
 void board_play_move(Board* pBoard,Move* sMove)
 {
 	// dont forget to set pMove->bNutHasFallen		
@@ -75,7 +143,7 @@ void board_unplay_move(Board* pBoard,Move* sMove)
 {
 	// dont forget to set pMove->bNutHasFallen		
 }
-void game_push_move(Game* pGame,Game sMove,Board* pBoard)
+void game_push_move(Game* pGame,Move sMove,Board* pBoard)
 {
 	board_play_move(pBoard,&sMove);
 	
@@ -84,14 +152,18 @@ void game_push_move(Game* pGame,Game sMove,Board* pBoard)
 }
 void game_pop_move(Game* pGame,Board* pBoard)
 {
+	Move* pLastMove;
 	pGame->iNumMoves--;
-	Move* pLastMove=&(pGame->pMoves[pGame->iNumMoves]);
+
+
+	pLastMove=&(pGame->pMoves[pGame->iNumMoves]);
 	
 	board_unplay_move(pBoard,pLastMove);
 		
 		
 }
 
+#ifdef AQUI
 void scan(Game * pGame,Board * pBoard, Game** ppSolutions,int * piNumSolutions)
 {
 	if(game_is_solution()==true)
@@ -132,11 +204,13 @@ void find_solutions(Board* pBoard, PieceDef* pPieceDefs, PiecePos* pPiecePos,int
 	game_delete(pWorkGame);	
 };
 
+#endif 
 
 int main (int argc,char* argv[])
 {
-	
-	
+	Material* pMaterial=material_create(4,4);
+	material_print(pMaterial);
+	material_delete(pMaterial);
 	
 return 0;
 }
