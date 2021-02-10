@@ -13,6 +13,9 @@ void error(char* pMessage)
 	printf("ERROR: %s", pMessage);
 	exit(1);
 }	
+// ---------------------------------------------------
+//  Array
+// ---------------------------------------------------
 // Array of pointers to structures
 typedef struct
 {
@@ -62,32 +65,43 @@ void array_add(Array* pArray,void* pElement)
 	
 	
 }
+void* array_get_element(Array* pArray, int iElementIndex)
+{
+	void* pElement= pArray->ppElements[iElementIndex];
+	return pElement;
+}
 
-
+void array_forget_element(Array* pArray, int iElementIndex)
+{
+	pArray->ppElements[iElementIndex]=NULL;
+}
+// ---------------------------------------------------
+//  Position
+// ---------------------------------------------------
 typedef struct
 {
 	int iX;
 	int iY;
 }Position;
 
-/* Description of the material used for a game (How many of rows and colums in the board, description of the pieces)*/
-typedef struct
-{	//number of rows and columsof the board
-	int iNumRows;
-	int iNumCols;
-	Array sPieceDefs; //Array of PieceDef
-	Array sHolePos; //Array of Position
-}Material;
-
-Material * material_create(int iNumRows, int iNumCols)
+Position* position_create(int iX, int iY)
 {
-	Material* pMaterial = (Material *)malloc(sizeof(Material));
-	pMaterial->iNumRows = iNumRows;
-	pMaterial->iNumCols = iNumCols;
-	array_init(&pMaterial->sPieceDefs);
-	array_init(&pMaterial->sHolePos);
-	return pMaterial;
+	Position* pPos = malloc(sizeof(Position));
+	pPos->iX=iX;
+	pPos->iY=iY;
+	return pPos;
 }
+
+void position_delete(Position* pPos)
+{   
+	printf("deleting position X= %d Y= %d\n",pPos->iX, pPos->iY);
+	free(pPos);
+}
+
+	
+// ---------------------------------------------------
+//  PieceDef
+// ---------------------------------------------------
 // maximum number of tiles covered by any place
 #define MAX_PIECE_SIZE 3
 typedef struct
@@ -151,6 +165,59 @@ void piece_def_add_hole(PieceDef* pPiece,int iHolePosX,int iHolePosY)
 	pPiece->bHasHole = true;
 	
 }
+// ---------------------------------------------------
+//  Material
+// ---------------------------------------------------
+/* Description of the material used for a game (How many of rows and colums in the board, description of the pieces)*/
+typedef struct
+{	//number of rows and columsof the board
+	int iNumRows;
+	int iNumCols;
+	Array sPieceDefs; //Array of PieceDef
+	Array sHolesPos; //Array of Position
+}Material;
+
+Material * material_create(int iNumRows, int iNumCols)
+{
+	Material* pMaterial = (Material *)malloc(sizeof(Material));
+	pMaterial->iNumRows = iNumRows;
+	pMaterial->iNumCols = iNumCols;
+	array_init(&pMaterial->sPieceDefs);
+	array_init(&pMaterial->sHolesPos);
+	return pMaterial;
+}
+void material_delete(Material* pMaterial)
+{
+	int iPieceIndex;
+	int iHolePosIndex;
+	for(iHolePosIndex = 0; iHolePosIndex < pMaterial->sPieceDefs.iNumElements; iHolePosIndex++)
+	{
+		//PieceDef* pHolePos = pMaterial->sHolesPos.ppElements[iHolePosIndex];
+		Position* pHolePos = array_get_element(&(pMaterial->sHolesPos),iHolePosIndex);
+		position_delete(pHolePos);
+		//pMaterial->sHolesPos.ppElements[iHolePosIndex]=NULL;
+		array_forget_element(&(pMaterial->sHolesPos),iHolePosIndex);
+	}
+	
+	for(iPieceIndex = 0; iPieceIndex < pMaterial->sPieceDefs.iNumElements; iPieceIndex++)
+	{
+		//PieceDef* pPiece = pMaterial->sPieceDefs.ppElements[iPieceIndex];
+		PieceDef* pPiece = array_get_element(&(pMaterial->sPieceDefs),iPieceIndex);
+		piece_def_delete(pPiece);
+		
+		//pMaterial->sPieceDefs.ppElements[iPieceIndex]=NULL;
+		array_forget_element(&(pMaterial->sPieceDefs),iPieceIndex);
+		
+	}
+	// type of pMaterial : Material*
+	// type of *pMaterial : Material
+	// type (*pMaterial).sPieceDefs : Array
+	// type of pMaterial->PieceDefs : Array
+	// type of &(pMaterial->sPieceDefs): Array*
+	array_empty(&(pMaterial->sPieceDefs));
+	array_empty(&(pMaterial->sHolesPos));
+	free(pMaterial);
+}
 
 void material_add_piece_def(Material* pMaterial, PieceDef* pPieceDef)
 {       // type de pMaterial: Material*
@@ -163,32 +230,39 @@ void material_add_piece_def(Material* pMaterial, PieceDef* pPieceDef)
 		// eg: "Material* p" should be read material pointed by pArray
 	array_add(&(pMaterial->sPieceDefs), pPieceDef);
 }
-void material_delete(Material* pMaterial)
-{
-	int iPieceIndex=0;
-	for(iPieceIndex = 0; iPieceIndex < pMaterial->sPieceDefs.iNumElements; iPieceIndex++)
-	{
-		PieceDef* pPiece = pMaterial->sPieceDefs.ppElements[iPieceIndex];
-		piece_def_delete(pPiece);
-		pMaterial->sPieceDefs.ppElements[iPieceIndex]=NULL;
-	}
-	// type of pMaterial : Material*
-	// type of *pMaterial : Material
-	// type (*pMaterial).sPieceDefs : Array
-	// type of pMaterial->PieceDefs : Array
-	// type of &(pMaterial->sPieceDefs): Array*
-	array_empty(&(pMaterial->sPieceDefs));
-	array_empty(&(pMaterial->sHolePos));
-	free(pMaterial);
+
+void material_add_hole_pos(Material* pMaterial, Position* pHolePos)
+{       // type de pMaterial: Material*
+		// type de *Material: Material
+		// type de (*pMaterial).sPieceDefs: Array
+		// type de pMaterial->sPieceDefs: Array
+		// type de &(pMaterial->sPieceDefs): Array*
+		// & should be read as "addres of"
+		// * should bu read as "pointed by"
+		// eg: "Material* p" should be read material pointed by pArray
+	array_add(&(pMaterial->sHolesPos), pHolePos);
 }
+
+
 void material_print(Material* pMaterial)
 {   int iPieceIndex=0;
+	int iHolePosIndex=0;
 	printf("board size: %d x %d\n", pMaterial->iNumRows,pMaterial->iNumCols);
+	// print the holes position
+	for(iHolePosIndex = 0; iHolePosIndex < pMaterial->sHolesPos.iNumElements; iHolePosIndex++)
+	{
+		//PieceDef* pPiece = pMaterial->sPieceDefs.ppElements[iHolePosIndex];
+		Position* pHolePos = array_get_element(&(pMaterial->sHolesPos),iHolePosIndex);
+		printf("Hole at (%d,%d)\n",pHolePos->iX,pHolePos->iY);
+	}
+	// print the piece definitions
 	for(iPieceIndex = 0; iPieceIndex < pMaterial->sPieceDefs.iNumElements; iPieceIndex++)
 	{
-		PieceDef* pPiece = pMaterial->sPieceDefs.ppElements[iPieceIndex];
+		//PieceDef* pPiece = pMaterial->sPieceDefs.ppElements[iPieceIndex];
+		PieceDef* pPiece = array_get_element(&(pMaterial->sPieceDefs),iPieceIndex);
 		piece_def_print(pPiece);
 	}
+	
 
 }
 
@@ -330,6 +404,16 @@ int main (int argc,char* argv[])
 	piece_def_add_hole(p1,0,1);
 	
 	material_add_piece_def(pMaterial,p1);
+	/*
+	Position* pHolePos1 = malloc(sizeof(Position));
+	pHolePos1->iX=3;
+	pHolePos1->iY=2;
+	material_add_hole_pos(pMaterial,pHolePos1);
+	*/
+	material_add_hole_pos(pMaterial, position_create(3,0));
+	material_add_hole_pos(pMaterial, position_create(1,1));
+	material_add_hole_pos(pMaterial, position_create(0,2));
+	material_add_hole_pos(pMaterial, position_create(2,3));
 	
 	material_print(pMaterial);
 	material_delete(pMaterial);
